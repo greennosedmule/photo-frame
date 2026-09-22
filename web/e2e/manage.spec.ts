@@ -1,21 +1,24 @@
 import { type Page } from '@playwright/test';
-import { expect, signIn, test } from './support/fixtures';
+import { expect, signIn, test, withServerLog } from './support/fixtures';
 import { makeJpeg } from './support/images';
+import type { Stack } from './support/stack';
 
 const PHOTOS = 45;
 test.use({ photoCount: PHOTOS });
 test.describe.configure({ mode: 'serial' });
 
-async function openManage(page: Page) {
-  await page.goto('/manage');
-  await page.locator('.cell').first().waitFor();
+async function openManage(page: Page, stack: Stack) {
+  await withServerLog(stack, async () => {
+    await page.goto('/manage');
+    await page.locator('.cell').first().waitFor();
+  });
 }
 
 const cells = (page: Page) => page.locator('.cell');
 const heading = (page: Page) => page.locator('aside h2');
 
 test('the grid is virtualised, newest first, and selection has every mode', async ({ page, stack }) => {
-  await openManage(page);
+  await openManage(page, stack);
   const m = await stack.manifest();
   expect(await cells(page).count()).toBeLessThan(m.photos.length);
 
@@ -51,7 +54,7 @@ test('the grid is virtualised, newest first, and selection has every mode', asyn
 });
 
 test('tagging the selection needs no sign-in and shows checked and mixed states', async ({ page, stack }) => {
-  await openManage(page);
+  await openManage(page, stack);
   await cells(page).nth(0).click();
   await cells(page).nth(2).click({ modifiers: ['Shift'] });
   await expect(heading(page)).toHaveText(/^3 selected/);
@@ -69,7 +72,7 @@ test('tagging the selection needs no sign-in and shows checked and mixed states'
 });
 
 test('a date override asks for sign-in, rejects a wrong password, then applies', async ({ page, stack }) => {
-  await openManage(page);
+  await openManage(page, stack);
   await cells(page).nth(0).click();
   await cells(page).nth(1).click({ modifiers: ['Shift'] });
   await page.locator('input[type="datetime-local"]').fill('1987-06-14T09:30');
@@ -91,7 +94,7 @@ test('a date override asks for sign-in, rejects a wrong password, then applies',
 });
 
 test('rotating the selection shows progress and regenerates thumbnails', async ({ page, stack }) => {
-  await openManage(page);
+  await openManage(page, stack);
   // One of the newest photographs, so its cell is inside the rendered window.
   const newest = [...(await stack.manifest()).photos].sort((x, y) => y.effective_date.localeCompare(x.effective_date));
   const target = newest.slice(0, 20).find((p) => p.rotation === 0)!;
@@ -107,7 +110,7 @@ test('rotating the selection shows progress and regenerates thumbnails', async (
 });
 
 test('uploading indexes a new photograph and drops an exact duplicate', async ({ page, stack }) => {
-  await openManage(page);
+  await openManage(page, stack);
   const before = (await stack.manifest()).photos.length;
   const file = { name: 'uploaded.jpg', mimeType: 'image/jpeg', buffer: makeJpeg(400, 300, 4242) };
 
@@ -132,7 +135,7 @@ test('uploading indexes a new photograph and drops an exact duplicate', async ({
 });
 
 test('deleting asks first, hides at once, and removes originals and derivatives', async ({ page, stack }) => {
-  await openManage(page);
+  await openManage(page, stack);
   const before = await stack.manifest();
   await cells(page).nth(0).click();
   await cells(page).nth(1).click({ modifiers: ['Shift'] });
@@ -164,7 +167,7 @@ test('export downloads the curation, including rotation, tags and date overrides
   await fetch(`${stack.url}/api/photos/${a.hash}/tags`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ add: 'exported' }) });
   await stack.call('PATCH', `/api/photos/${b.hash}`, { rotate: 180, date_override: '2001-02-03T04:05:06Z' });
 
-  await openManage(page);
+  await openManage(page, stack);
   const download = page.waitForEvent('download');
   await page.getByRole('button', { name: 'Export curation' }).click();
   await signIn(page);
@@ -181,7 +184,7 @@ test('export downloads the curation, including rotation, tags and date overrides
 });
 
 test('the status panel reflects the library and can request a scan', async ({ page, stack }) => {
-  await openManage(page);
+  await openManage(page, stack);
   const total = (await stack.manifest()).photos.length;
   await expect(page.locator('.panel')).toContainText(`${total} photographs`);
   await expect(page.locator('.panel')).toContainText('Failed 0');

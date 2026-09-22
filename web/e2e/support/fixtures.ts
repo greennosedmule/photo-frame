@@ -4,6 +4,20 @@ import { ADMIN_PASSWORD, Stack } from './stack';
 export { expect };
 
 /**
+ * Run `fn` and, on failure, fold the tail of the stack's server output into
+ * the thrown error so it shows up in the CI annotation, not just the trace
+ * artifact (which needs an authenticated download to read).
+ */
+export async function withServerLog<T>(stack: Stack, fn: () => Promise<T>): Promise<T> {
+  try {
+    return await fn();
+  } catch (e) {
+    const tail = stack.logs().slice(-4000);
+    throw new Error(`${e instanceof Error ? e.message : e}\n--- server log (tail) ---\n${tail}`);
+  }
+}
+
+/**
  * `stack` is one real server plus indexer per worker, on its own volume and
  * port. `photoCount` sets how many photographs it starts with.
  */

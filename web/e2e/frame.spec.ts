@@ -1,11 +1,14 @@
-import { currentSrc, expect, hashOf, overlayShown, settingsInIndexedDb, signIn, test } from './support/fixtures';
+import { currentSrc, expect, hashOf, overlayShown, settingsInIndexedDb, signIn, test, withServerLog } from './support/fixtures';
+import type { Stack } from './support/stack';
 
 test.describe.configure({ mode: 'serial' });
 
 /** Load the frame and wait until a photograph is showing. */
-async function openFrame(page: import('@playwright/test').Page) {
-  await page.goto('/');
-  await page.locator('.slide img.photo').first().waitFor();
+async function openFrame(page: import('@playwright/test').Page, stack: Stack) {
+  await withServerLog(stack, async () => {
+    await page.goto('/');
+    await page.locator('.slide img.photo').first().waitFor();
+  });
   await page.waitForTimeout(600);
 }
 
@@ -23,8 +26,8 @@ async function surfacePoint(page: import('@playwright/test').Page) {
   return { x: box.x + box.width / 2, y: box.y + box.height / 3, box };
 }
 
-test('a click toggles the overlay, and right-click shows it instead of the browser menu', async ({ page }) => {
-  await openFrame(page);
+test('a click toggles the overlay, and right-click shows it instead of the browser menu', async ({ page, stack }) => {
+  await openFrame(page, stack);
   const { x, y } = await surfacePoint(page);
 
   await page.mouse.click(x, y);
@@ -43,8 +46,8 @@ test('a click toggles the overlay, and right-click shows it instead of the brows
   expect(await overlayShown(page)).toBe(true);
 });
 
-test('holding the mouse down opens nothing, and overlay buttons open the two sheets', async ({ page }) => {
-  await openFrame(page);
+test('holding the mouse down opens nothing, and overlay buttons open the two sheets', async ({ page, stack }) => {
+  await openFrame(page, stack);
   const { x, y } = await surfacePoint(page);
 
   // Long press is for touch and pen; a held mouse button is a drag.
@@ -65,8 +68,8 @@ test('holding the mouse down opens nothing, and overlay buttons open the two she
   await expect(page.locator('.sheet h2')).toHaveText('This photograph');
 });
 
-test('the photograph follows the finger during a drag and springs back when released short', async ({ page }) => {
-  await openFrame(page);
+test('the photograph follows the finger during a drag and springs back when released short', async ({ page, stack }) => {
+  await openFrame(page, stack);
   const { x, y } = await surfacePoint(page);
   const first = await currentSrc(page);
   const slideX = () => page.evaluate(() => {
@@ -86,7 +89,7 @@ test('the photograph follows the finger during a drag and springs back when rele
 });
 
 test('swipes, arrow keys, space and f drive the frame', async ({ page, stack }) => {
-  await openFrame(page);
+  await openFrame(page, stack);
   const { x, y } = await surfacePoint(page);
   const first = await currentSrc(page);
 
@@ -120,7 +123,7 @@ test('swipes, arrow keys, space and f drive the frame', async ({ page, stack }) 
 });
 
 test('frame settings live in IndexedDB only and survive a reload', async ({ page, stack }) => {
-  await openFrame(page);
+  await openFrame(page, stack);
   const { x, y } = await surfacePoint(page);
   await ensureOverlay(page);
   await page.getByRole('button', { name: 'Frame settings' }).click();
@@ -136,7 +139,7 @@ test('frame settings live in IndexedDB only and survive a reload', async ({ page
 });
 
 test('tags are shared, hiding is this frame only', async ({ page, stack }) => {
-  await openFrame(page);
+  await openFrame(page, stack);
   const { x, y } = await surfacePoint(page);
   const before = (await stack.manifest()).photos.length;
   const hash = hashOf(await currentSrc(page));
@@ -161,7 +164,7 @@ test('tags are shared, hiding is this frame only', async ({ page, stack }) => {
 });
 
 test('rotating a photograph regenerates it under a new URL and leaves the original alone', async ({ page, stack }) => {
-  await openFrame(page);
+  await openFrame(page, stack);
   const { x, y } = await surfacePoint(page);
   const before = await currentSrc(page);
   const hash = hashOf(before);
