@@ -572,11 +572,14 @@ Run as a non-root user. The only writable paths are the two mounts.
 
 ### GitHub Actions
 
-| Workflow | Trigger | Does |
-| --- | --- | --- |
-| `ci` | push, PR | `cargo fmt --check`, `cargo clippy -- -D warnings`, `cargo test` against both SQLite and a Postgres service container, `npm run check`, `npm run build` |
-| `image` | push to `main`, tags | Build and push `ghcr.io/<owner>/photoframe-web` and `…/photoframe-indexer`, tagged with the short SHA and `latest` |
-| `fuzz` | weekly | `cargo fuzz` against `imagepipe` decode entry points |
+| Workflow | Job | Trigger | Does |
+| --- | --- | --- | --- |
+| `ci` | `rust`, `web`, `e2e` | push, PR | `cargo fmt --check`, `cargo clippy -- -D warnings`, `cargo test` against both SQLite and a Postgres service container, `npm run check`, `npm run build`, `npm run e2e` |
+| `ci` | `image` | push to `main`, tags, after `rust`/`web`/`e2e` pass | Build and push `ghcr.io/<owner>/photoframe-web` and `…/photoframe-indexer`, tagged with the short SHA and `latest` |
+| `ci` | `helm` | push to `main`, tags, after `rust`/`web`/`e2e` pass | Package and push the chart to `oci://ghcr.io/<owner>/charts/photoframe`, tagged with `Chart.yaml`'s `version` |
+| `fuzz` | | weekly | `cargo fuzz` against `imagepipe` decode entry points |
+
+The `image` and `helm` jobs depend on the test jobs so a failing build or e2e run never reaches `:latest` or the chart's published version.
 
 Build for `linux/amd64` and `linux/arm64` if any cluster node is ARM; otherwise amd64 alone and add the second later.
 

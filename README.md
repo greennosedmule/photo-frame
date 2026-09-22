@@ -53,13 +53,13 @@ Copy some photos into `./library/incoming/`, or upload them at `http://localhost
 The Helm chart in [helm-charts/photoframe/](helm-charts/photoframe/) supports both topologies. See its [README](helm-charts/photoframe/README.md) for details.
 
 ```bash
-helm install frame ./helm-charts/photoframe -n photoframe --create-namespace \
+helm install frame oci://ghcr.io/<owner>/charts/photoframe --version 0.1.0 -n photoframe --create-namespace \
   --set image.registry=ghcr.io/<owner> \
   --set admin.password=<password> \
   --set ingress.enabled=true --set 'ingress.hosts={frame.example.com}'
 ```
 
-Images are built by the `image` workflow on every push to `main` and published to `ghcr.io/<owner>/photoframe-web` and `photoframe-indexer`, using the workflow's built-in token. Make the packages public to pull them without a secret, or create an `imagePullSecrets` entry with a `read:packages` token if you keep them private. TLS terminates at your Ingress; the apps speak plain HTTP.
+Images and the chart are built by the `ci` workflow's `image` and `helm` jobs on every push to `main` that passes tests, and published to `ghcr.io/<owner>/photoframe-web`, `photoframe-indexer` and `charts/photoframe`, using the workflow's built-in token. Make the packages public to pull them without a secret, or create an `imagePullSecrets` entry with a `read:packages` token if you keep them private. TLS terminates at your Ingress; the apps speak plain HTTP.
 
 To build the images yourself:
 

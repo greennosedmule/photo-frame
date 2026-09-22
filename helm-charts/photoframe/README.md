@@ -11,9 +11,21 @@ Deploys `photoframe-web` and `photoframe-indexer`. `database.type` picks the top
 
 ## Install
 
+The `image` workflow pushes the chart to GHCR alongside the images, so a cluster already configured to pull from `ghcr.io` can install directly by OCI reference — no `helm repo add` needed:
+
 ```bash
 # create the pull secret first (see docs/SPEC.md, Pulling from GHCR)
-helm install frame ./helm-charts/photoframe -n photoframe \
+helm install frame oci://ghcr.io/<owner>/charts/photoframe --version 0.1.0 -n photoframe --create-namespace \
+  --set image.registry=ghcr.io/<owner> \
+  --set 'imagePullSecrets[0].name=ghcr' \
+  --set admin.password=<password> \
+  --set ingress.enabled=true --set 'ingress.hosts={frame.example.com}'
+```
+
+Or from a checkout, with the chart's local path in place of the OCI reference:
+
+```bash
+helm install frame ./helm-charts/photoframe -n photoframe --create-namespace \
   --set image.registry=ghcr.io/<owner> \
   --set 'imagePullSecrets[0].name=ghcr' \
   --set admin.password=<password> \
