@@ -12,7 +12,7 @@ export async function withServerLog<T>(stack: Stack, fn: () => Promise<T>): Prom
   try {
     return await fn();
   } catch (e) {
-    const tail = stack.logs().slice(-4000);
+    const tail = stack.logs().slice(-8000);
     throw new Error(`${e instanceof Error ? e.message : e}\n--- server log (tail) ---\n${tail}`);
   }
 }

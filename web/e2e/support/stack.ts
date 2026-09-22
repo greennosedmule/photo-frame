@@ -61,12 +61,16 @@ export class Stack {
       // Short intervals: the indexer also checks requests and the scan flag every 2 s.
       SCAN_INTERVAL_SECS: '2',
       INGEST_QUIET_SECS: '0',
-      LOG_LEVEL: 'warn',
+      // 'warn' is silent for a healthy server, which hid whether the failing
+      // browser's request ever reached it. 'debug' logs every request/response
+      // via tower-http's TraceLayer.
+      LOG_LEVEL: 'debug',
     };
     for (const b of ['photoframe-indexer', 'photoframe-web']) {
       const p = spawn(path.join(bins, b), [], { env, stdio: ['ignore', 'pipe', 'pipe'] });
       p.stdout.on('data', (d) => (stack.log += `[${b}] ${d}`));
       p.stderr.on('data', (d) => (stack.log += `[${b}] ${d}`));
+      p.on('exit', (code, signal) => (stack.log += `[${b}] process exited: code=${code} signal=${signal}\n`));
       stack.procs.push(p);
     }
     try {
