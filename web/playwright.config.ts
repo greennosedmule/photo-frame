@@ -15,7 +15,9 @@ export default defineConfig({
   testDir: 'e2e',
   timeout: 90_000,
   expect: { timeout: 10_000 },
-  workers: 2,
+  // 2 workers means 2 real server pairs plus two browsers all at once; CI runners
+  // don't have the headroom and it shows up as flaky navigation/render timeouts.
+  workers: process.env.CI ? 1 : 2,
   retries: process.env.CI ? 1 : 0,
   reporter: process.env.CI ? [['list'], ['github']] : [['list']],
   use: { trace: 'retain-on-failure', viewport: { width: 1280, height: 800 } },
