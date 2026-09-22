@@ -1,0 +1,16 @@
+name: fuzz
+on:
+  schedule:
+    - cron: "0 3 * * 0"
+  workflow_dispatch:
+
+jobs:
+  fuzz:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@nightly
+      - run: cargo install cargo-fuzz --locked
+      # One target per Decoder implementation; only `sniff` exists so far.
+      - run: cargo fuzz run sniff -- -max_total_time=300
+        working-directory: crates/imagepipe

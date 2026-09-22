@@ -1,0 +1,29 @@
+{
+  "name": "photoframe-web-client",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "check": "svelte-check --tsconfig ./tsconfig.json && tsc -p e2e",
+    "test": "vitest run",
+    "e2e": "playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.63.0",
+    "@sveltejs/vite-plugin-svelte": "^5.0.0",
+    "@tsconfig/svelte": "^5.0.0",
+    "@types/node": "^26.6.2",
+    "jpeg-js": "^0.4.4",
+    "svelte": "^5.0.0",
+    "svelte-check": "^4.0.0",
+    "typescript": "^5.6.0",
+    "vite": "^6.0.0",
+    "vite-plugin-pwa": "^1.0.0",
+    "vitest": "^3.0.0"
+  },
+  "dependencies": {
+    "@use-gesture/vanilla": "^10.3.0"
+  }
+}

@@ -1,0 +1,6 @@
+apiVersion: v2
+name: photoframe
+description: Photo frame web tier and indexer, on SQLite (one pod) or Postgres (two Deployments)
+type: application
+version: 0.1.0
+appVersion: "latest"

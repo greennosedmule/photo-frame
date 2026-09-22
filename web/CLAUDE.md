@@ -1,0 +1,21 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+Shared architecture, invariants and commands are in `../CLAUDE.md`; the full spec is `../docs/SPEC.md`. This directory is the client: TypeScript, Svelte, Vite, `vite-plugin-pwa` and `@use-gesture/vanilla`. It builds to `dist/`, which `../crates/photoframe-web/` embeds.
+
+- Primary target is an iPad Pro 11" on iPadOS 26.6.1, installed as a PWA under Guided Access. The frame view (`/`) is full-screen and gesture-driven, and must also work on desktop with keyboard equivalents (arrows, space to pause, `f` to favourite). The management view (`/manage`) is a separate pointer-and-keyboard layout sharing the API, build and component library; do not try to make one responsive layout serve both.
+- **All client settings live in IndexedDB and never go to the server** (dwell, ordering, tag filter/affinity, hidden hashes, zoom, dim schedule). Do not use `localStorage`.
+- **Zoom is stored as a normalised focal rectangle** (`{x,y,w,h}` in 0..1 of the original image), not a scale, so it survives a different aspect ratio. Each cycle returns to the remembered rectangle.
+- **Sequencing** is a pure function (weighted shuffle without replacement, tag affinity, recency penalty, `on-this-day` fallback). Keep it DOM-free and unit-test it on its own. The formula is in the spec's *Sequencing* section.
+- **Service worker:** cache-first with no revalidation for `/media`, and stale-while-revalidate for the manifest. A frame with a cached manifest and media must run indefinitely with the backend down.
+- **Safari/iPadOS handling:** `touch-action: none` on the photo surface, `-webkit-touch-callout: none` and `user-select: none`, `overscroll-behavior: none` on body, and viewport meta with `viewport-fit=cover`. Re-acquire the `WakeLock` on every `visibilitychange`. `navigator.share({files})` needs a user gesture and falls back to a download on desktop.
+- **OLED:** persistent elements (including the info overlay) shift a few pixels every 10 minutes and fade when idle. The dim schedule ramps over 60 s and any touch lifts it for 30 s.
+- **The blurred letterbox is done in the browser.** Draw the 64 px `blur` variant scaled to fill with CSS `filter: blur()` plus a brightness reduction, then the `display` variant fitted on top.
+- Poll `/api/status` every `MANIFEST_POLL_INTERVAL` (default 300 s) and refetch the manifest only when the generation moves. Preload the next two photographs decoded in the DOM at `opacity: 0`.
+- **Tests:** vitest for the pure logic (sequencing, ordering, dim, zoom, grid, settings, prefetch). `npm run e2e` (Playwright, in `e2e/`) starts the real `photoframe-web` and `photoframe-indexer` on a temp volume with generated JPEGs (`e2e/support/stack.ts`, one stack per worker) and drives Chromium and Firefox through the frame and management views. New behaviour that involves a gesture, a sheet, the login form, or the cache needs an e2e test; unit tests cannot see those bugs (a tap that never fired shipped past every unit test).
+
+- **Interaction model (frame):** gestures attach to the photo surface only; the overlay, sheets and dim layer are siblings, so button clicks never count as taps on the photo. Tap or click toggles the overlay, whose buttons open two sheets: *This photograph* (favourite, rotate, tags, hide, zoom, share; favourites, tags and rotation are shared, hide and zoom are this device's) and *Frame settings* (client-only). Right-click is cancelled on the surface and shows the overlay; long press is touch/pen only. Rotation and other curation edits go through `withAuth`, and `Login` is mounted in the frame view too.
+- **use-gesture quirk:** a tap arrives as one `onDrag` event on release with `tap: true` and `last` unset. Handle `s.tap` before any `!s.last` early return, or taps silently never fire (they didn't, until this was found).
+- **Test what you assert:** check computed visibility (opacity), not just a CSS class. An overlay once carried `.visible` while invisible.
+- **Offline cache:** the frame prefetches the whole `display` and `blur` set into the service worker's `media` cache (`lib/prefetch.ts`), skipping what is cached, stopping near the storage quota, and dropping entries for deleted or rotated photographs. An e2e test cuts the network and reloads.

@@ -1,0 +1,129 @@
+# Which database backend to deploy for. This decides the topology.
+#   sqlite   one Deployment, one pod, web and indexer as two containers sharing
+#            a state volume. Web is fixed at 1 replica.
+#   postgres two Deployments (web 1..n, indexer exactly 1). You host the database.
+database:
+  type: sqlite
+
+  postgres:
+    # Full URL, e.g. postgres://photoframe:secret@db.example:5432/photoframe.
+    # Ends up in the chart-managed Secret. Ignored when existingSecret is set.
+    url: ""
+    # Existing Secret holding the URL under the key below.
+    existingSecret: ""
+    existingSecretKey: database-url
+
+  sqlite:
+    # State volume for photoframe.db. Must be node-local or block storage,
+    # never NFS. ReadWriteOnce is enough because there is only one pod.
+    persistence:
+      existingClaim: ""
+      storageClass: ""
+      accessModes: [ReadWriteOnce]
+      size: 1Gi
+
+image:
+  # Owner or registry path the images were pushed to; required.
+  # Images are <registry>/photoframe-web and <registry>/photoframe-indexer.
+  registry: "ghcr.io/greennosedmule"
+  tag: latest
+  pullPolicy: IfNotPresent
+
+# Pull secret for the private GHCR package (see docs/SPEC.md, Pulling from GHCR).
+imagePullSecrets: []    # e.g. [{name: ghcr}]
+
+# The library volume: incoming/, quarantine/, library/, derivatives/, exports/.
+# Shared by both workloads. Expected to be RWX (NFS) on Postgres. With SQLite
+# both containers are in one pod, so RWO also works.
+library:
+  mountPath: /library
+  persistence:
+    existingClaim: ""
+    storageClass: ""
+    accessModes: [ReadWriteMany]
+    size: 50Gi
+
+admin:
+  username: admin
+  password: ""          # required unless existingSecret or allowedCIDRs is set
+  # Existing Secret holding the password under the key below.
+  existingSecret: ""
+  existingSecretKey: admin-password
+  # Source ranges that may manage without a password (an alternative to it;
+  # if both are set either grants access). Matched against the client address.
+  allowedCIDRs: []      # e.g. ["192.168.1.0/24"]
+  # Peers whose X-Forwarded-For is believed: the Ingress controller's pod or
+  # node range. Required for allowedCIDRs to work behind an Ingress; leave
+  # empty only if clients reach the pod directly. Too broad a range lets any
+  # client in it spoof an allowed address.
+  trustedProxyCIDRs: []
+
+# Canonical hostname for the PWA manifest and service worker scope. Set once
+# and do not change it casually. Defaults to the first ingress host.
+publicHostname: ""
+
+logLevel: info
+
+web:
+  replicas: 1           # values above 1 are refused on sqlite
+  maxUploadBytes: 104857600
+  resources:
+    requests: {cpu: 50m, memory: 64Mi}
+    limits: {memory: 256Mi}
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+  podAnnotations: {}
+  extraEnv: []
+
+indexer:
+  scanIntervalSecs: 60
+  # true leaves incoming/ to an external malware scanner sidecar.
+  ingestRequireScan: false
+  ingestQuietSecs: 5
+  derivativeWorkers: 2
+  maxDecodePixels: 80000000
+  maxDecodeBytes: 134217728
+  decodeTimeoutSecs: 30
+  enableAvif: true      # parsed and currently ignored by the app
+  # In-flight derivative jobs get this long to finish on SIGTERM.
+  terminationGracePeriodSeconds: 120
+  # A 48 MP original peaks near 450 MB per worker, so budget
+  # derivativeWorkers x 450 MB plus headroom.
+  resources:
+    requests: {cpu: 250m, memory: 512Mi}
+    limits: {memory: 1536Mi}
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+  podAnnotations: {}
+  extraEnv: []
+
+service:
+  type: ClusterIP
+  port: 80
+
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+    # cert-manager.io/cluster-issuer: letsencrypt
+    # nginx.ingress.kubernetes.io/proxy-body-size: 100m
+  hosts: []             # e.g. [frame.example.com]
+  # TLS terminates here; the apps speak plain HTTP.
+  tls: []               # e.g. [{secretName: frame-tls, hosts: [frame.example.com]}]
+
+# Both images run as distroless nonroot (65532). fsGroup makes the volumes
+# writable for it where the storage driver honours fsGroup. On NFS, fix
+# ownership on the export instead.
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 65532
+  runAsGroup: 65532
+  fsGroup: 65532
+  seccompProfile: {type: RuntimeDefault}
+
+containerSecurityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities: {drop: [ALL]}

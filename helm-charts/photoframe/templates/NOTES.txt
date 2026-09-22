@@ -1,0 +1,14 @@
+photoframe deployed with the {{ .Values.database.type }} backend.
+{{- if eq .Values.database.type "sqlite" }}
+Web and indexer run as two containers in one pod; web is fixed at 1 replica.
+{{- else }}
+Web: {{ .Values.web.replicas }} replica(s). Indexer: exactly 1.
+{{- end }}
+{{ if .Values.ingress.enabled }}
+Open https://{{ first .Values.ingress.hosts }}/ (management login: {{ .Values.admin.username }}).
+{{- else }}
+Try it without an ingress:
+  kubectl port-forward svc/{{ include "photoframe.name" . }} 8080:{{ .Values.service.port }}
+{{- end }}
+
+The library and state PVCs carry helm.sh/resource-policy: keep, so `helm uninstall` leaves your photos.

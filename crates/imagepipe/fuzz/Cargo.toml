@@ -1,0 +1,35 @@
+[package]
+name = "imagepipe-fuzz"
+version = "0.0.0"
+edition = "2024"
+publish = false
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4"
+imagepipe = { path = ".." }
+
+[[bin]]
+name = "sniff"
+path = "fuzz_targets/sniff.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "inspect"
+path = "fuzz_targets/inspect.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "derive"
+path = "fuzz_targets/derive.rs"
+test = false
+doc = false
+bench = false
+
+[workspace]

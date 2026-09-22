@@ -1,0 +1,44 @@
+[workspace]
+resolver = "2"
+members = [
+  "crates/photoframe-web",
+  "crates/photoframe-indexer",
+  "crates/photoframe-store",
+  "crates/imagepipe",
+]
+# cargo-fuzz needs nightly and its own lockfile; keep it out of the stable workspace.
+exclude = ["crates/imagepipe/fuzz"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+license = "MIT OR Apache-2.0"
+publish = false
+
+[workspace.dependencies]
+anyhow = "1"
+async-trait = "0.1"
+axum = { version = "0.8", features = ["multipart"] }
+base64 = "0.22"
+ipnet = "2"
+clap = { version = "4", features = ["derive"] }
+rust-embed = "8"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+sqlx = { version = "0.8", default-features = false, features = ["runtime-tokio", "tls-rustls", "sqlite", "postgres", "migrate", "macros"] }
+subtle = "2"
+thiserror = "2"
+tokio = { version = "1", features = ["macros", "rt-multi-thread", "signal", "time", "fs"] }
+tower = "0.5"
+tower-http = { version = "0.6", features = ["compression-full", "trace", "fs"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+photoframe-store = { path = "crates/photoframe-store" }
+imagepipe = { path = "crates/imagepipe" }
+
+[workspace.lints.rust]
+unsafe_code = "forbid"
+
+[workspace.lints.clippy]
+all = { level = "warn", priority = -1 }

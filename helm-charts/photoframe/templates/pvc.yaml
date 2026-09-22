@@ -1,0 +1,35 @@
+{{- if not .Values.library.persistence.existingClaim }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "photoframe.libraryClaim" . }}
+  labels: {{- include "photoframe.labels" . | nindent 4 }}
+  annotations:
+    helm.sh/resource-policy: keep
+spec:
+  accessModes: {{- toYaml .Values.library.persistence.accessModes | nindent 4 }}
+  {{- with .Values.library.persistence.storageClass }}
+  storageClassName: {{ . | quote }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ .Values.library.persistence.size }}
+{{- end }}
+{{- if and (eq .Values.database.type "sqlite") (not .Values.database.sqlite.persistence.existingClaim) }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "photoframe.stateClaim" . }}
+  labels: {{- include "photoframe.labels" . | nindent 4 }}
+  annotations:
+    helm.sh/resource-policy: keep
+spec:
+  accessModes: {{- toYaml .Values.database.sqlite.persistence.accessModes | nindent 4 }}
+  {{- with .Values.database.sqlite.persistence.storageClass }}
+  storageClassName: {{ . | quote }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ .Values.database.sqlite.persistence.size }}
+{{- end }}

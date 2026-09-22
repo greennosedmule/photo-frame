@@ -1,0 +1,15 @@
+/target
+/state
+/library
+/web/node_modules
+/web/dist
+/web/.svelte-kit
+crates/imagepipe/fuzz/target
+crates/imagepipe/fuzz/corpus
+crates/imagepipe/fuzz/artifacts
+*.db
+*.db-wal
+*.db-shm
+.env
+/web/test-results
+/web/playwright-report

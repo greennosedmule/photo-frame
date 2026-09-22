@@ -1,0 +1,24 @@
+[package]
+name = "photoframe-indexer"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+anyhow.workspace = true
+blake3 = { version = "1.8.7", features = ["pure"] }
+clap.workspace = true
+imagepipe.workspace = true
+photoframe-store.workspace = true
+serde_json.workspace = true
+tokio.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
+
+[lints]
+workspace = true
+
+[dev-dependencies]
+jpeg-encoder = "0.7.1"
+tempfile = "3.27.0"

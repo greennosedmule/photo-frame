@@ -1,0 +1,27 @@
+{
+  "name": "photo-frame",
+  "image": "mcr.microsoft.com/devcontainers/rust:1-bookworm",
+  "features": {
+    "ghcr.io/devcontainers/features/node:1": { "version": "lts" },
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {}
+  },
+  "mounts": [
+    "source=claude-config-${devcontainerId},target=/home/vscode/.claude,type=volume"
+  ],
+  "postCreateCommand": "sudo chown vscode:vscode /home/vscode/.claude && rustup component add clippy rustfmt",
+  "forwardPorts": [8080, 5173],
+  "portsAttributes": {
+    "8080": { "label": "photoframe-web" },
+    "5173": { "label": "vite dev server" }
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "rust-lang.rust-analyzer",
+        "tamasfe.even-better-toml",
+        "svelte.svelte-vscode",
+        "anthropic.claude-code"
+      ]
+    }
+  }
+}
