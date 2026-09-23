@@ -31,14 +31,14 @@ cargo fmt --check
 cargo clippy -- -D warnings
 cargo test                       # SQLite always; Postgres contract tests too when TEST_POSTGRES_URL is set (CI sets it)
 npm run check && npm test && npm run build   # in web/
-npm run e2e                      # in web/; real binaries in real browsers. Build first: cargo build -p photoframe-web -p photoframe-indexer, then npm run build
+npm run e2e                      # in web/; real binaries in real browsers. Build first, in this order: npm run build, then cargo build -p photoframe-web -p photoframe-indexer
 #   PW_CHROMIUM=/usr/bin/chromium PW_NO_SANDBOX=1 npm run e2e -- --project=chromium   # container without Playwright's browsers
 cargo fuzz                       # weekly, against imagepipe decode entry points
 
 cargo test -p <crate> <test_name>   # single test
 ```
 
-Running locally on SQLite alone is a hard requirement: "if a change makes this stop working, the change is wrong." Postgres is CI-only for contributors. Tests select Postgres via `TEST_POSTGRES_URL`; without it they skip. Build `web/` before release-building `photoframe-web` so the client is embedded (debug builds and `cargo test` work without it).
+Running locally on SQLite alone is a hard requirement: "if a change makes this stop working, the change is wrong." Postgres is CI-only for contributors. Tests select Postgres via `TEST_POSTGRES_URL`; without it they skip. Build `web/` before release-building `photoframe-web` so the client is embedded. Debug builds and `cargo test` still compile without it, but serving the client in a debug build needs `web/dist` to exist *before* that `cargo build` runs: rust-embed's dev-mode path-traversal check canonicalizes the folder at compile time and silently keeps an unresolved path if it's missing then, which then fails every request. Build order is `npm run build` before `cargo build`/`cargo run`, not the reverse.
 
 ## Architecture
 

@@ -35,7 +35,8 @@ The database is SQLite or Postgres, selected by `DATABASE_URL`. SQLite is for on
 You need a Rust toolchain and Node. The [devcontainer](.devcontainer/) has both. No database server is required.
 
 ```bash
-(cd web && npm ci && npm run build)   # optional for debug builds; needed for release builds
+(cd web && npm ci && npm run build)   # do this before cargo build/run: rust-embed's
+                                       # dev-mode path check is baked in at compile time
 
 # shell 1: web
 DATABASE_URL=sqlite://./state/photoframe.db LIBRARY_ROOT=./library \
