@@ -30,7 +30,10 @@ pub async fn serve(uri: Uri) -> Response {
         }
         None => match Assets::get("index.html") {
             Some(f) => (f, "index.html"),
-            None => return (StatusCode::NOT_FOUND, "client not built").into_response(),
+            None => {
+                tracing::warn!("client not built: index.html missing from embedded/on-disk assets");
+                return (StatusCode::NOT_FOUND, "client not built").into_response();
+            }
         },
     };
 
