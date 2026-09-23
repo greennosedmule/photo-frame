@@ -7,8 +7,12 @@ use axum::http::{StatusCode, Uri, header};
 use axum::response::{IntoResponse, Response};
 use rust_embed::RustEmbed;
 
+// $CARGO_MANIFEST_DIR makes this absolute in debug builds too. Without it,
+// rust-embed's dev-mode disk reads resolve "../../web/dist" relative to the
+// process's CWD, not this crate's directory - wrong (and 404s as "client not
+// built") for any debug run started from somewhere else, e.g. `web/` in e2e CI.
 #[derive(RustEmbed)]
-#[folder = "../../web/dist"]
+#[folder = "$CARGO_MANIFEST_DIR/../../web/dist"]
 #[allow_missing = true]
 struct Assets;
 

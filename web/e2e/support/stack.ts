@@ -61,10 +61,7 @@ export class Stack {
       // Short intervals: the indexer also checks requests and the scan flag every 2 s.
       SCAN_INTERVAL_SECS: '2',
       INGEST_QUIET_SECS: '0',
-      // 'warn' is silent for a healthy server, which hid whether the failing
-      // browser's request ever reached it. 'debug' logs every request/response
-      // via tower-http's TraceLayer.
-      LOG_LEVEL: 'debug',
+      LOG_LEVEL: 'warn',
     };
     for (const b of ['photoframe-indexer', 'photoframe-web']) {
       const p = spawn(path.join(bins, b), [], { env, stdio: ['ignore', 'pipe', 'pipe'] });
