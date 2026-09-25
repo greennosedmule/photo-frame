@@ -6,7 +6,8 @@
 app.kubernetes.io/name: photoframe
 app.kubernetes.io/instance: {{ .Release.Name }}
 app.kubernetes.io/managed-by: {{ .Release.Service }}
-helm.sh/chart: {{ .Chart.Name }}-{{ .Chart.Version }}
+{{- /* Flux appends "+<digest>" to the version of a chart from an OCI source, and "+" is invalid in a label value. */}}
+helm.sh/chart: {{ printf "%s-%s" .Chart.Name .Chart.Version | replace "+" "_" | trunc 63 | trimSuffix "-" }}
 {{- end -}}
 
 {{/* selector labels for a component: web or indexer. The sqlite pod carries both. */}}

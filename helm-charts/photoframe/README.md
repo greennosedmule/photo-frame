@@ -15,7 +15,7 @@ The `image` workflow pushes the chart to GHCR alongside the images, so a cluster
 
 ```bash
 # create the pull secret first (see docs/SPEC.md, Pulling from GHCR)
-helm install frame oci://ghcr.io/<owner>/charts/photoframe --version 0.1.0 -n photoframe --create-namespace \
+helm install frame oci://ghcr.io/<owner>/charts/photoframe --version 0.1.1 -n photoframe --create-namespace \
   --set image.registry=ghcr.io/<owner> \
   --set 'imagePullSecrets[0].name=ghcr' \
   --set admin.password=<password> \
