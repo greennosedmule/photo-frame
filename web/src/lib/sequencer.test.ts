@@ -5,7 +5,7 @@ import { Sequencer } from './sequencer';
 const p = (hash: string, date: string, ...tags: string[]): ManifestPhoto => ({
   hash, w: 1, h: 1, effective_date: date, date_source: 'exif', favorite: false, tags, rotation: 0, media_rotation: 0,
 });
-const base = { ordering: 'chronological' as const, tagAffinity: 0.5, hidden: [] as string[], tagFilter: [] as string[] };
+const base = { ordering: 'chronological' as const, tagAffinity: 0.5, tagWeights: {} as Record<string, number>, hidden: [] as string[], tagFilter: [] as string[] };
 const lib = [p('c', '2022-01-01T00:00:00Z'), p('a', '2020-01-01T00:00:00Z'), p('b', '2021-01-01T00:00:00Z')];
 
 describe('Sequencer', () => {

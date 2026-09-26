@@ -14,6 +14,8 @@ export interface ClientSettings {
   ordering: 'shuffle' | 'chronological' | 'reverse-chronological' | 'on-this-day';
   tagFilter: string[];
   tagAffinity: number;
+  /** Multiplier per tag name for shuffle; absent means 1. */
+  tagWeights: Record<string, number>;
   transition: 'crossfade' | 'cut';
   fillMode: 'blur' | 'letterbox' | 'crop';
   hidden: string[];
@@ -26,12 +28,18 @@ export const defaultSettings: ClientSettings = {
   ordering: 'shuffle',
   tagFilter: [],
   tagAffinity: 0.5,
+  tagWeights: {},
   transition: 'crossfade',
   fillMode: 'blur',
   hidden: [],
   zoom: {},
   dimSchedule: { start: '22:00', end: '07:00', opacity: 0.8, blackout: false },
 };
+
+// Never zero: a photograph with a zero-weight tag would never show, which is
+// what the tag filter and hiding are for.
+export const TAG_WEIGHT_MIN = 0.25;
+export const TAG_WEIGHT_MAX = 4;
 
 const orderings = ['shuffle', 'chronological', 'reverse-chronological', 'on-this-day'] as const;
 const transitions = ['crossfade', 'cut'] as const;
@@ -59,11 +67,18 @@ export function mergeSettings(stored: unknown): ClientSettings {
       }
     }
   }
+  const tagWeights: Record<string, number> = {};
+  if (typeof s.tagWeights === 'object' && s.tagWeights !== null) {
+    for (const [name, w] of Object.entries(s.tagWeights as Record<string, unknown>)) {
+      if (typeof w === 'number' && Number.isFinite(w) && w > 0 && w !== 1) tagWeights[name] = num(w, TAG_WEIGHT_MIN, TAG_WEIGHT_MAX, 1);
+    }
+  }
   return {
     dwellSeconds: num(s.dwellSeconds, 3, 3600, d.dwellSeconds),
     ordering: oneOf(s.ordering, orderings, d.ordering),
     tagFilter: strings(s.tagFilter),
     tagAffinity: num(s.tagAffinity, 0, 1, d.tagAffinity),
+    tagWeights,
     transition: oneOf(s.transition, transitions, d.transition),
     fillMode: oneOf(s.fillMode, fills, d.fillMode),
     hidden: strings(s.hidden),

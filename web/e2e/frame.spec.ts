@@ -178,6 +178,13 @@ test('tags are shared, hiding is this frame only', async ({ page, stack }) => {
   await page.getByRole('button', { name: 'Frame settings' }).click();
   await page.getByRole('button', { name: /Unhide 1 hidden photo/ }).click();
   await expect.poll(async () => (await settingsInIndexedDb(page))?.hidden).toEqual([]);
+
+  // Tag weights are this frame's too, and Normal is stored as no entry at all.
+  const weight = page.locator('.sheet label', { hasText: 'e2e-tag' }).locator('select');
+  await weight.selectOption({ label: 'Much less' });
+  await expect.poll(async () => (await settingsInIndexedDb(page))?.tagWeights).toEqual({ 'e2e-tag': 0.25 });
+  await weight.selectOption({ label: 'Normal' });
+  await expect.poll(async () => (await settingsInIndexedDb(page))?.tagWeights).toEqual({});
 });
 
 test('rotating a photograph regenerates it under a new URL and leaves the original alone', async ({ page, stack }) => {

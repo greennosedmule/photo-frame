@@ -9,7 +9,7 @@ describe('mergeSettings', () => {
   });
 
   it('keeps valid stored values', () => {
-    const stored = { ...defaultSettings, dwellSeconds: 90, ordering: 'chronological', hidden: ['a'], tagFilter: ['dogs'], zoom: { a: { x: 0.1, y: 0.2, w: 0.3, h: 0.4 } } };
+    const stored = { ...defaultSettings, dwellSeconds: 90, ordering: 'chronological', hidden: ['a'], tagFilter: ['dogs'], tagWeights: { cats: 0.25, mum: 2 }, zoom: { a: { x: 0.1, y: 0.2, w: 0.3, h: 0.4 } } };
     expect(mergeSettings(stored)).toEqual(stored);
   });
 
@@ -18,6 +18,7 @@ describe('mergeSettings', () => {
     expect(m.dwellSeconds).toBe(3);
     expect(m.ordering).toBe('shuffle');
     expect(m.tagAffinity).toBe(1);
+    expect(mergeSettings({ tagWeights: { a: 0, b: 100, c: 'x', d: 1, e: 0.5 } }).tagWeights).toEqual({ b: 4, e: 0.5 });
     expect(m.hidden).toEqual(['a']);
     expect(Object.keys(m.zoom)).toEqual(['b']);
     expect(m.dimSchedule).toEqual(defaultSettings.dimSchedule);

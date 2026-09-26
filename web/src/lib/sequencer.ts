@@ -6,7 +6,7 @@ import { byDate, eligible, ON_THIS_DAY_MIN, onThisDay } from './ordering';
 import { pickNext } from './sequencing';
 import type { ClientSettings } from './settings';
 
-type Picking = Pick<ClientSettings, 'ordering' | 'tagAffinity' | 'hidden' | 'tagFilter'>;
+type Picking = Pick<ClientSettings, 'ordering' | 'tagAffinity' | 'tagWeights' | 'hidden' | 'tagFilter'>;
 
 export class Sequencer {
   private history: string[] = [];
@@ -110,6 +110,6 @@ export class Sequencer {
       if (today.length >= ON_THIS_DAY_MIN) candidates = today;
     }
     const cur = pool.find((p) => p.hash === this.current);
-    return pickNext(candidates, cur, this.history, s.tagAffinity, rand)?.hash;
+    return pickNext(candidates, cur, this.history, s.tagAffinity, s.tagWeights, rand)?.hash;
   }
 }

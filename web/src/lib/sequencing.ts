@@ -1,6 +1,7 @@
 // Pure and DOM-free so it can be unit-tested on its own.
 //
-//   weight(p) = 1 × (1 + tagAffinity × sharedTagCount(p, current)) × recencyPenalty(p)
+//   weight(p) = Π tagWeight(t) for t in p.tags
+//             × (1 + tagAffinity × sharedTagCount(p, current)) × recencyPenalty(p)
 //   recencyPenalty = 0.05 if shown within the last N, else 1.0;  N = min(50, eligible × 0.3)
 
 export interface Candidate {
@@ -18,11 +19,13 @@ export function weight(
   recent: readonly string[],
   tagAffinity: number,
   eligibleCount: number,
+  tagWeights: Readonly<Record<string, number>> = {},
 ): number {
+  const base = p.tags.reduce((w, t) => w * (tagWeights[t] ?? 1), 1);
   const shared = current ? p.tags.filter((t) => current.tags.includes(t)).length : 0;
   const window = recencyWindow(eligibleCount);
   const recentlyShown = window > 0 && recent.slice(-window).includes(p.hash);
-  return (1 + tagAffinity * shared) * (recentlyShown ? 0.05 : 1);
+  return base * (1 + tagAffinity * shared) * (recentlyShown ? 0.05 : 1);
 }
 
 /** Pick the next photograph. `rand` is injectable (returns [0,1)) for tests. */
@@ -31,10 +34,11 @@ export function pickNext(
   current: Candidate | undefined,
   recent: readonly string[],
   tagAffinity: number,
+  tagWeights: Readonly<Record<string, number>> = {},
   rand: () => number = Math.random,
 ): Candidate | undefined {
   if (eligible.length === 0) return undefined;
-  const weights = eligible.map((p) => weight(p, current, recent, tagAffinity, eligible.length));
+  const weights = eligible.map((p) => weight(p, current, recent, tagAffinity, eligible.length, tagWeights));
   const total = weights.reduce((a, b) => a + b, 0);
   let r = rand() * total;
   for (let i = 0; i < eligible.length; i++) {

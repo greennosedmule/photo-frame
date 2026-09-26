@@ -31,7 +31,22 @@ describe('sequencing', () => {
   it('selects proportionally to weight', () => {
     const cur = c('cur', 'x');
     const pool = [c('a', 'x'), c('b')]; // weights 1.5 and 1
-    expect(pickNext(pool, cur, [], 0.5, () => 0)?.hash).toBe('a');
-    expect(pickNext(pool, cur, [], 0.5, () => 0.99)?.hash).toBe('b');
+    expect(pickNext(pool, cur, [], 0.5, {}, () => 0)?.hash).toBe('a');
+    expect(pickNext(pool, cur, [], 0.5, {}, () => 0.99)?.hash).toBe('b');
+  });
+
+  it('multiplies the weights of every tag a photograph carries', () => {
+    const w = { cats: 0.25, mum: 2 };
+    expect(weight(c('a', 'cats'), undefined, [], 0.5, 100, w)).toBe(0.25);
+    expect(weight(c('b', 'mum'), undefined, [], 0.5, 100, w)).toBe(2);
+    expect(weight(c('c', 'cats', 'mum'), undefined, [], 0.5, 100, w)).toBe(0.5);
+    expect(weight(c('d', 'dogs'), undefined, [], 0.5, 100, w)).toBe(1);
+  });
+
+  it('tag weights shift selection without excluding anything', () => {
+    const pool = [c('cat', 'cats'), c('mum', 'mum')]; // weights 0.25 and 4
+    const w = { cats: 0.25, mum: 4 };
+    expect(pickNext(pool, undefined, [], 0, w, () => 0.1)?.hash).toBe('mum');
+    expect(pickNext(pool, undefined, [], 0, w, () => 0.05)?.hash).toBe('cat');
   });
 });

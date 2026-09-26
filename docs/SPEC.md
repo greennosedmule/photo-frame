@@ -433,6 +433,7 @@ interface ClientSettings {
   ordering: 'shuffle' | 'chronological' | 'reverse-chronological' | 'on-this-day';
   tagFilter: string[];           // empty means everything
   tagAffinity: number;           // 0..1, default 0.5
+  tagWeights: Record<string, number>; // tag name → 0.25..4; absent means 1
   transition: 'crossfade' | 'cut';
   fillMode: 'blur' | 'letterbox' | 'crop';
   hidden: string[];              // hashes
@@ -448,7 +449,7 @@ Remembered zoom is stored as a normalised focal rectangle — `{x, y, w, h}` in 
 Shuffle is weighted random selection without replacement over the eligible set (manifest minus hidden, filtered by `tagFilter`).
 
 ```
-weight(p) = 1
+weight(p) = Π tagWeight(t) for each tag t on p   (1 if unset)
           × (1 + tagAffinity × sharedTagCount(p, current))
           × recencyPenalty(p)
 
@@ -457,6 +458,8 @@ recencyPenalty(p) = 0.05 if p shown within the last N
 ```
 
 The affinity term makes a photograph sharing tags with the current one more likely to follow without ever guaranteeing it, so the frame drifts through a theme and then wanders off. The recency penalty is a strong multiplier rather than a hard exclusion so small libraries never deadlock.
+
+Tag weights let a frame show a tag more or less often (a library dominated by cat photos, say) without filtering it out. A photograph's tag weights multiply, and they are bounded to 0.25..4 and never zero, so no photograph is excluded this way; that is what `tagFilter` and hiding are for. Chronological orderings ignore them.
 
 `on-this-day` filters to photographs within ±3 days of today's month and day in any year, falling back to shuffle when fewer than five qualify.
 

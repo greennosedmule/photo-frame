@@ -18,6 +18,22 @@
       s.tagFilter = s.tagFilter.includes(name) ? s.tagFilter.filter((t) => t !== name) : [...s.tagFilter, name];
     });
   }
+
+  const weightSteps = [
+    { value: 0.25, label: 'Much less' },
+    { value: 0.5, label: 'Less' },
+    { value: 1, label: 'Normal' },
+    { value: 2, label: 'More' },
+    { value: 4, label: 'Much more' },
+  ];
+
+  function setWeight(name: string, value: number) {
+    set((s) => {
+      // Normal is stored as absence, so the record only holds real choices.
+      const { [name]: _, ...rest } = s.tagWeights;
+      s.tagWeights = value === 1 ? rest : { ...rest, [name]: value };
+    });
+  }
 </script>
 
 <Sheet title="Frame settings" {onclose}>
@@ -70,6 +86,23 @@
       <button class="ghost" onclick={() => set((s) => (s.tagFilter = []))}>Clear</button>
     {/if}
   </div>
+
+  {#if tags.length}
+    <h3>Tag weights</h3>
+    <p class="muted">How often each tag comes up when shuffling. A photo with several tags combines them.</p>
+    <div class="grid">
+      {#each tags as t (t.name)}
+        <label>{t.name} <small>{t.count}</small>
+          <select value={settings.tagWeights[t.name] ?? 1} onchange={(e) => setWeight(t.name, Number(e.currentTarget.value))}>
+            {#each weightSteps as step (step.value)}<option value={step.value}>{step.label}</option>{/each}
+          </select>
+        </label>
+      {/each}
+    </div>
+    {#if Object.keys(settings.tagWeights).length}
+      <div class="chips"><button class="ghost" onclick={() => set((s) => (s.tagWeights = {}))}>Reset weights</button></div>
+    {/if}
+  {/if}
 
   <h3>Dimming</h3>
   <div class="grid">

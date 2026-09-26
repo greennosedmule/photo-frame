@@ -5,7 +5,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 Shared architecture, invariants and commands are in `../CLAUDE.md`; the full spec is `../docs/SPEC.md`. This directory is the client: TypeScript, Svelte, Vite, `vite-plugin-pwa` and `@use-gesture/vanilla`. It builds to `dist/`, which `../crates/photoframe-web/` embeds.
 
 - Primary target is an iPad Pro 11" on iPadOS 26.6.1, installed as a PWA under Guided Access. The frame view (`/`) is full-screen and gesture-driven, and must also work on desktop with keyboard equivalents (arrows, space to pause, `f` to favourite). The management view (`/manage`) is a separate pointer-and-keyboard layout sharing the API, build and component library; do not try to make one responsive layout serve both.
-- **All client settings live in IndexedDB and never go to the server** (dwell, ordering, tag filter/affinity, hidden hashes, zoom, dim schedule). Do not use `localStorage`.
+- **All client settings live in IndexedDB and never go to the server** (dwell, ordering, tag filter/affinity/weights, hidden hashes, zoom, dim schedule). Do not use `localStorage`.
 - **Zoom is stored as a normalised focal rectangle** (`{x,y,w,h}` in 0..1 of the original image), not a scale, so it survives a different aspect ratio. Each cycle returns to the remembered rectangle.
 - **Sequencing** is a pure function (weighted shuffle without replacement, tag affinity, recency penalty, `on-this-day` fallback). Keep it DOM-free and unit-test it on its own. The formula is in the spec's *Sequencing* section.
 - **Service worker:** cache-first with no revalidation for `/media`, and stale-while-revalidate for the manifest. A frame with a cached manifest and media must run indefinitely with the backend down.
