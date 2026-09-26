@@ -35,10 +35,13 @@ export default defineConfig({
             },
           },
           {
-            // Stale-while-revalidate so a cluster restart never blanks the frame.
+            // Network first, cache only as a fallback so a cluster restart never
+            // blanks the frame. Not stale-while-revalidate: that answers every
+            // refresh with the previous fetch, which overwrites local edits
+            // (tags, favourites) with a manifest from before they were made.
             urlPattern: ({ url }) => url.pathname === '/api/manifest',
-            handler: 'StaleWhileRevalidate',
-            options: { cacheName: 'manifest' },
+            handler: 'NetworkFirst',
+            options: { cacheName: 'manifest', networkTimeoutSeconds: 10 },
           },
         ],
       },
