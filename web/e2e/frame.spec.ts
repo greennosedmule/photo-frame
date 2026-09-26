@@ -68,6 +68,23 @@ test('holding the mouse down opens nothing, and overlay buttons open the two she
   await expect(page.locator('.sheet h2')).toHaveText('This photograph');
 });
 
+test('the slideshow holds still while the photo sheet is open', async ({ page, stack }) => {
+  await openFrame(page, stack);
+  await ensureOverlay(page);
+  await page.getByRole('button', { name: 'Frame settings' }).click();
+  await page.locator('.sheet input[type=range]').first().fill('5');
+  await page.locator('.sheet header button').click();
+
+  await ensureOverlay(page);
+  await page.getByRole('button', { name: 'This photograph' }).click();
+  const held = await currentSrc(page);
+  await page.waitForTimeout(7000);
+  expect(await currentSrc(page)).toBe(held);
+
+  await page.locator('.sheet header button').click();
+  await expect.poll(() => currentSrc(page), { timeout: 8000 }).not.toBe(held);
+});
+
 test('the photograph follows the finger during a drag and springs back when released short', async ({ page, stack }) => {
   await openFrame(page, stack);
   const { x, y } = await surfacePoint(page);

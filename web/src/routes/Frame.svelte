@@ -91,7 +91,9 @@
   function replan() {
     seq.dropAhead();
     if (currentHash && !seq.current) return;
-    if (current && !isEligible(current)) forward();
+    // Not while the photo sheet is open: an edit there (removing a filtered tag)
+    // must not swap the photograph out from under it. closeSheet() rechecks.
+    if (current && !isEligible(current) && sheet !== 'photo') forward();
     else plan();
   }
 
@@ -102,7 +104,8 @@
   let advanceTimer: ReturnType<typeof setTimeout> | undefined;
   function scheduleAdvance() {
     clearTimeout(advanceTimer);
-    if (paused) return;
+    // The photo sheet edits the photograph on screen, so it must stay put.
+    if (paused || sheet === 'photo') return;
     advanceTimer = setTimeout(() => (dragMode === 'idle' ? forward() : scheduleAdvance()), settings.dwellSeconds * 1000);
   }
 
@@ -283,6 +286,16 @@
   function openSheet(which: 'settings' | 'photo') {
     hideOverlay();
     sheet = which;
+    scheduleAdvance();
+  }
+
+  function closeSheet() {
+    const wasPhoto = sheet === 'photo';
+    sheet = undefined;
+    if (!wasPhoto) return;
+    // A full dwell from here, and anything replan() held back while it was open.
+    scheduleAdvance();
+    replan();
   }
 
   /** A right-click is the desktop way to ask for controls, not for the browser's menu. */
@@ -312,7 +325,7 @@
     } else if (e.key === 'f') void favourite();
     else if (e.key === 'i') (overlayVisible ? (overlayVisible = false) : showOverlay());
     else if (e.key === 's') sheet = 'settings';
-    else if (e.key === 'Escape') sheet = undefined;
+    else if (e.key === 'Escape') closeSheet();
     else return;
     liftedUntil = Date.now() + TOUCH_LIFT_MS;
     tickDim();
@@ -445,9 +458,9 @@
 </div>
 
 {#if sheet === 'settings'}
-  <SettingsSheet onclose={() => (sheet = undefined)} onchange={replan} />
+  <SettingsSheet onclose={closeSheet} onchange={replan} />
 {:else if sheet === 'photo' && currentHash}
-  <PhotoSheet hash={currentHash} onclose={() => (sheet = undefined)} onhide={() => { sheet = undefined; hideCurrent(); }} onshare={() => void share()} />
+  <PhotoSheet hash={currentHash} onclose={closeSheet} onhide={() => { sheet = undefined; hideCurrent(); }} onshare={() => void share()} />
 {/if}
 
 <Login />
