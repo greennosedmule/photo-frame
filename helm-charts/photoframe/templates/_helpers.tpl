@@ -54,7 +54,7 @@ app.kubernetes.io/component: {{ .component }}
 {{- end -}}
 
 {{- define "photoframe.image" -}}
-{{ printf "%s/photoframe-%s:%s" (trimSuffix "/" .root.Values.image.registry) .component .root.Values.image.tag }}
+{{ printf "%s/photoframe-%s:%s" (trimSuffix "/" .root.Values.image.registry) .component (default .root.Chart.AppVersion .root.Values.image.tag) }}
 {{- end -}}
 
 {{- define "photoframe.dbEnv" -}}

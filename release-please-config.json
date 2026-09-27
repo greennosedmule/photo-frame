@@ -1,0 +1,24 @@
+{
+  "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json",
+  "bootstrap-sha": "baf57188a75ecd776467ec2ae5678ea9ac51079c",
+  "packages": {
+    ".": {
+      "release-type": "simple",
+      "package-name": "photoframe",
+      "include-component-in-tag": false,
+      "release-as": "1.0.0",
+      "extra-files": [
+        {
+          "type": "yaml",
+          "path": "helm-charts/photoframe/Chart.yaml",
+          "jsonpath": "$.version"
+        },
+        {
+          "type": "yaml",
+          "path": "helm-charts/photoframe/Chart.yaml",
+          "jsonpath": "$.appVersion"
+        }
+      ]
+    }
+  }
+}
