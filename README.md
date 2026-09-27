@@ -154,8 +154,6 @@ The workflows rely on these settings, which live outside the repo:
 - **Settings → Secrets and variables → Actions:** add `RELEASE_PLEASE_TOKEN`, a fine-grained personal access token for this repository only with **Contents** and **Pull requests** read and write. GitHub runs no workflows for a PR opened with the built-in token, so without this secret the release PR never gets its required checks and can't be merged. The workflow falls back to the built-in token if the secret is missing, and the token expires, so renew it.
 - **Settings → Rules → Rulesets**, on the default branch: require a pull request, allow only squash merges, block force pushes and deletion, and require the status checks `rust`, `web`, `e2e`, `chart` and `lint`. A check can be selected only after it has run once, so add them after the first PR.
 
-The first release is forced to `1.0.0` by `"release-as"` in `release-please-config.json`. Remove that line once 1.0.0 is out, or every later release PR proposes 1.0.0 again.
-
 ## Status
 
 Feature-complete for v1 on SQLite. Known gaps:
