@@ -3,4 +3,4 @@ name: photoframe
 description: Photo frame web tier and indexer, on SQLite (one pod) or Postgres (two Deployments)
 type: application
 version: 0.1.1
-appVersion: "latest"
+appVersion: "0.1.1"

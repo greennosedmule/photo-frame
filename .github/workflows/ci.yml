@@ -1,6 +1,8 @@
 name: ci
 on:
+  # Branches are tested through their PR; pushing to main is what releases.
   push:
+    branches: [main]
   pull_request:
 
 permissions:
@@ -82,11 +84,43 @@ jobs:
           name: playwright-traces
           path: web/test-results
 
-  # Only publishes once rust, web and e2e have all passed, so a broken build
-  # never reaches :latest.
+  # Lints on every PR; publishing is too late to find a broken chart.
+  chart:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: azure/setup-helm@v5
+      - run: helm lint helm-charts/photoframe --set image.registry=x --set admin.password=x
+
+  # release-please keeps one release PR open with the next version, the
+  # changelog and the Chart.yaml bump. Merging it tags vX.Y.Z and sets
+  # release_created, the only thing that publishes images or the chart. It
+  # runs after the tests, so a red main can't cut a release.
+  release:
+    needs: [rust, web, e2e, chart]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    outputs:
+      created: ${{ steps.rp.outputs.release_created }}
+      version: ${{ steps.rp.outputs.version }}
+    steps:
+      - id: rp
+        uses: googleapis/release-please-action@v5
+        with:
+          # GitHub runs no workflows for a PR opened with GITHUB_TOKEN, so the
+          # release PR's required checks would never report and it couldn't
+          # merge. A PAT's PRs get CI like any other; GITHUB_TOKEN is only the
+          # fallback until the secret exists.
+          token: ${{ secrets.RELEASE_PLEASE_TOKEN || secrets.GITHUB_TOKEN }}
+
+  # Hangs off the release job's output rather than a tag push: the tag is
+  # created with a token whose events don't start workflows.
   image:
-    needs: [rust, web, e2e]
-    if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')
+    needs: release
+    if: needs.release.outputs.created == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -113,17 +147,22 @@ jobs:
           push: true
           # amd64 only; add linux/arm64 when a cluster node needs it.
           platforms: linux/amd64
+          # The chart's appVersion is the release version, so that tag is the
+          # one deployments use; sha and latest are for pulling by hand.
           tags: |
+            ghcr.io/${{ steps.meta.outputs.owner }}/photoframe-${{ matrix.target }}:${{ needs.release.outputs.version }}
             ghcr.io/${{ steps.meta.outputs.owner }}/photoframe-${{ matrix.target }}:${{ steps.meta.outputs.sha }}
             ghcr.io/${{ steps.meta.outputs.owner }}/photoframe-${{ matrix.target }}:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
   # Publishes the chart as an OCI artifact alongside the images, so a cluster
-  # already configured for ghcr.io needs no separate chart repo.
+  # already configured for ghcr.io needs no separate chart repo. Waits for
+  # both images: a cluster following new chart versions would otherwise
+  # install one whose images aren't pushed yet.
   helm:
-    needs: [rust, web, e2e]
-    if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')
+    needs: [release, image]
+    if: needs.release.outputs.created == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -136,9 +175,12 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - run: helm lint helm-charts/photoframe --set image.registry=x --set admin.password=x
       - id: meta
         run: echo "owner=${GITHUB_REPOSITORY_OWNER,,}" >> "$GITHUB_OUTPUT"
+      # Versions passed explicitly as well as bumped in Chart.yaml, so the
+      # published chart always matches the image tags it points at.
       - run: |
-          helm package helm-charts/photoframe --destination .
-          helm push photoframe-*.tgz "oci://ghcr.io/${{ steps.meta.outputs.owner }}/charts"
+          helm package helm-charts/photoframe --destination . --version "$VERSION" --app-version "$VERSION"
+          helm push "photoframe-$VERSION.tgz" "oci://ghcr.io/${{ steps.meta.outputs.owner }}/charts"
+        env:
+          VERSION: ${{ needs.release.outputs.version }}

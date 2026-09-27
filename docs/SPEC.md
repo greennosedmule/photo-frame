@@ -583,12 +583,14 @@ Run as a non-root user. The only writable paths are the two mounts.
 
 | Workflow | Job | Trigger | Does |
 | --- | --- | --- | --- |
-| `ci` | `rust`, `web`, `e2e` | push, PR | `cargo fmt --check`, `cargo clippy -- -D warnings`, `cargo test` against both SQLite and a Postgres service container, `npm run check`, `npm run build`, `npm run e2e` |
-| `ci` | `image` | push to `main`, tags, after `rust`/`web`/`e2e` pass | Build and push `ghcr.io/<owner>/photoframe-web` and `…/photoframe-indexer`, tagged with the short SHA and `latest` |
-| `ci` | `helm` | push to `main`, tags, after `rust`/`web`/`e2e` pass | Package and push the chart to `oci://ghcr.io/<owner>/charts/photoframe`, tagged with `Chart.yaml`'s `version` |
+| `ci` | `rust`, `web`, `e2e`, `chart` | push to `main`, PR | `cargo fmt --check`, `cargo clippy -- -D warnings`, `cargo test` against both SQLite and a Postgres service container, `npm run check`, `npm run build`, `npm run e2e`, `helm lint` |
+| `ci` | `release` | push to `main`, after the test jobs pass | release-please: keeps a release PR open with the next version, changelog and `Chart.yaml` bump; merging it tags `vX.Y.Z` |
+| `ci` | `image` | a release was created | Build and push `ghcr.io/<owner>/photoframe-web` and `…/photoframe-indexer`, tagged `X.Y.Z`, the short SHA and `latest` |
+| `ci` | `helm` | a release was created, after `image` | Package and push the chart to `oci://ghcr.io/<owner>/charts/photoframe` as version and appVersion `X.Y.Z` |
+| `pr-title` | `lint` | PR | The PR title is a Conventional Commit |
 | `fuzz` | | weekly | `cargo fuzz` against `imagepipe` decode entry points |
 
-The `image` and `helm` jobs depend on the test jobs so a failing build or e2e run never reaches `:latest` or the chart's published version.
+Changes reach `main` only through squash-merged PRs, so each PR title becomes one commit, and release-please derives the next version from those titles (`fix:` patch, `feat:` minor, `!` or `BREAKING CHANGE:` major). Nothing is published until the release PR is merged, and then only after the tests pass on that commit. The chart's image tag defaults to its `appVersion`, so installing chart `X.Y.Z` runs images `X.Y.Z`.
 
 Build for `linux/amd64` and `linux/arm64` if any cluster node is ARM; otherwise amd64 alone and add the second later.
 

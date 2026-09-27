@@ -26,7 +26,9 @@ image:
   # Owner or registry path the images were pushed to; required.
   # Images are <registry>/photoframe-web and <registry>/photoframe-indexer.
   registry: "ghcr.io/greennosedmule"
-  tag: latest
+  # Defaults to the chart's appVersion: each release publishes a chart and
+  # images with the same version, so a chart version pins its images.
+  tag: ""
   pullPolicy: IfNotPresent
 
 # Pull secret for the private GHCR package (see docs/SPEC.md, Pulling from GHCR).

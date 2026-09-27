@@ -54,13 +54,13 @@ Copy some photos into `./library/incoming/`, or upload them at `http://localhost
 The Helm chart in [helm-charts/photoframe/](helm-charts/photoframe/) supports both topologies. See its [README](helm-charts/photoframe/README.md) for details.
 
 ```bash
-helm install frame oci://ghcr.io/<owner>/charts/photoframe --version 0.1.1 -n photoframe --create-namespace \
+helm install frame oci://ghcr.io/<owner>/charts/photoframe --version 1.0.0 -n photoframe --create-namespace \
   --set image.registry=ghcr.io/<owner> \
   --set admin.password=<password> \
   --set ingress.enabled=true --set 'ingress.hosts={frame.example.com}'
 ```
 
-Images and the chart are built by the `ci` workflow's `image` and `helm` jobs on every push to `main` that passes tests, and published to `ghcr.io/<owner>/photoframe-web`, `photoframe-indexer` and `charts/photoframe`, using the workflow's built-in token. Make the packages public to pull them without a secret, or create an `imagePullSecrets` entry with a `read:packages` token if you keep them private. TLS terminates at your Ingress; the apps speak plain HTTP.
+Images and the chart are published only by a release (see [Releases](#releases)) to `ghcr.io/<owner>/photoframe-web`, `photoframe-indexer` and `charts/photoframe`, all with the same version. The chart's image tag defaults to its `appVersion`, so installing chart `X.Y.Z` runs images `X.Y.Z`. Make the packages public to pull them without a secret, or create an `imagePullSecrets` entry with a `read:packages` token if you keep them private. TLS terminates at your Ingress; the apps speak plain HTTP.
 
 To build the images yourself:
 
@@ -128,6 +128,33 @@ cargo test                                      # SQLite; Postgres too when TEST
 | `helm-charts/photoframe/` | Helm chart |
 
 Each crate and `web/` has its own `CLAUDE.md` with the rules that apply there.
+
+## Releases
+
+Every change reaches `main` through a squash-merged PR, and the PR title becomes the commit, so it must be a [Conventional Commit](https://www.conventionalcommits.org/): `fix:` releases a patch, `feat:` a minor, and `feat!:` (or a `BREAKING CHANGE:` footer) a major. Titles such as `chore:`, `ci:`, `docs:` and `test:` release nothing.
+
+[release-please](https://github.com/googleapis/release-please) keeps one release PR open, titled `chore(main): release X.Y.Z`, with the next version, the changelog and the bump to `helm-charts/photoframe/Chart.yaml`. Merging it releases:
+
+| Workflow | Job | Runs on | Does |
+| --- | --- | --- | --- |
+| `ci` | `rust`, `web`, `e2e`, `chart` | PRs, and pushes to `main` | Tests, lints and `helm lint`; the required checks |
+| `ci` | `release` | pushes to `main`, after the checks pass | Opens or updates the release PR; once it's merged, tags `vX.Y.Z` and creates the GitHub release |
+| `ci` | `image` | a release | Pushes both images tagged `X.Y.Z`, the short SHA and `latest` |
+| `ci` | `helm` | a release, after `image` | Pushes chart `X.Y.Z` with `appVersion` `X.Y.Z`, only once both images exist |
+| `pr-title` | `lint` | PRs | Fails a title that isn't a Conventional Commit |
+
+Publishing hangs off the `release` job's output rather than a `v*` tag push, because tags created with a workflow token start no workflows.
+
+### Repository setup
+
+The workflows rely on these settings, which live outside the repo:
+
+- **Settings → General → Pull Requests:** allow squash merging only, and set its default commit message to **Pull request title**. The default, "Default to pull request title", uses the commit message instead for a PR with one commit, which bypasses the title check.
+- **Settings → Actions → General → Workflow permissions:** tick **Allow GitHub Actions to create and approve pull requests** (at the bottom of the page) so release-please can open its PR. Leave the default token permissions on read-only; the workflow grants `release` its write access itself.
+- **Settings → Secrets and variables → Actions:** add `RELEASE_PLEASE_TOKEN`, a fine-grained personal access token for this repository only with **Contents** and **Pull requests** read and write. GitHub runs no workflows for a PR opened with the built-in token, so without this secret the release PR never gets its required checks and can't be merged. The workflow falls back to the built-in token if the secret is missing, and the token expires, so renew it.
+- **Settings → Rules → Rulesets**, on the default branch: require a pull request, allow only squash merges, block force pushes and deletion, and require the status checks `rust`, `web`, `e2e`, `chart` and `lint`. A check can be selected only after it has run once, so add them after the first PR.
+
+The first release is forced to `1.0.0` by `"release-as"` in `release-please-config.json`. Remove that line once 1.0.0 is out, or every later release PR proposes 1.0.0 again.
 
 ## Status
 
