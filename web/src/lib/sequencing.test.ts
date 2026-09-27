@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { pickNext, recencyWindow, weight, type Candidate } from './sequencing';
+import { ARRIVAL_BOOST, pickNext, recencyWindow, weight, type Candidate } from './sequencing';
 
 const c = (hash: string, ...tags: string[]): Candidate => ({ hash, tags });
 
@@ -31,8 +31,8 @@ describe('sequencing', () => {
   it('selects proportionally to weight', () => {
     const cur = c('cur', 'x');
     const pool = [c('a', 'x'), c('b')]; // weights 1.5 and 1
-    expect(pickNext(pool, cur, [], 0.5, {}, () => 0)?.hash).toBe('a');
-    expect(pickNext(pool, cur, [], 0.5, {}, () => 0.99)?.hash).toBe('b');
+    expect(pickNext(pool, cur, [], 0.5, {}, new Set(), () => 0)?.hash).toBe('a');
+    expect(pickNext(pool, cur, [], 0.5, {}, new Set(), () => 0.99)?.hash).toBe('b');
   });
 
   it('multiplies the weights of every tag a photograph carries', () => {
@@ -43,10 +43,15 @@ describe('sequencing', () => {
     expect(weight(c('d', 'dogs'), undefined, [], 0.5, 100, w)).toBe(1);
   });
 
+  it('boosts recent arrivals on top of everything else', () => {
+    expect(weight(c('a', 'cats'), undefined, [], 0.5, 100, { cats: 0.5 }, new Set(['a']))).toBe(0.5 * ARRIVAL_BOOST);
+    expect(weight(c('b'), undefined, [], 0.5, 100, {}, new Set(['a']))).toBe(1);
+  });
+
   it('tag weights shift selection without excluding anything', () => {
     const pool = [c('cat', 'cats'), c('mum', 'mum')]; // weights 0.25 and 4
     const w = { cats: 0.25, mum: 4 };
-    expect(pickNext(pool, undefined, [], 0, w, () => 0.1)?.hash).toBe('mum');
-    expect(pickNext(pool, undefined, [], 0, w, () => 0.05)?.hash).toBe('cat');
+    expect(pickNext(pool, undefined, [], 0, w, new Set(), () => 0.1)?.hash).toBe('mum');
+    expect(pickNext(pool, undefined, [], 0, w, new Set(), () => 0.05)?.hash).toBe('cat');
   });
 });

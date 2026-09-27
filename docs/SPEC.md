@@ -383,7 +383,7 @@ One request returns everything the frame needs to run for a session. At a few th
 }
 ```
 
-`generation` increments on any change to the indexed set or to shared state. The client polls `/api/status` on `MANIFEST_POLL_INTERVAL` (default 300 seconds), compares the generation, and refetches the manifest only when it has moved. The manifest response carries an `ETag`; clients send `If-None-Match` and normally get a 304.
+`generation` increments on any change to the indexed set or to shared state. The client polls `/api/status` on `MANIFEST_POLL_INTERVAL` (default 60 seconds, so new photographs reach frames quickly; the status check is a single counter read), compares the generation, and refetches the manifest only when it has moved. The manifest response carries an `ETag`; clients send `If-None-Match` and normally get a 304.
 
 Only photographs with `derivatives_ok = 1` appear in the manifest.
 
@@ -452,14 +452,20 @@ Shuffle is weighted random selection without replacement over the eligible set (
 weight(p) = Π tagWeight(t) for each tag t on p   (1 if unset)
           × (1 + tagAffinity × sharedTagCount(p, current))
           × recencyPenalty(p)
+          × arrivalBoost(p)
 
 recencyPenalty(p) = 0.05 if p shown within the last N
                     1.0  otherwise,  N = min(50, eligible × 0.3)
+
+arrivalBoost(p)   = 3   if this frame saw p arrive within the last 24 hours
+                    1.0 otherwise
 ```
 
 The affinity term makes a photograph sharing tags with the current one more likely to follow without ever guaranteeing it, so the frame drifts through a theme and then wanders off. The recency penalty is a strong multiplier rather than a hard exclusion so small libraries never deadlock.
 
 Tag weights let a frame show a tag more or less often (a library dominated by cat photos, say) without filtering it out. A photograph's tag weights multiply, and they are bounded to 0.25..4 and never zero, so no photograph is excluded this way; that is what `tagFilter` and hiding are for. Chronological orderings ignore them.
+
+**New arrivals.** When a manifest refresh brings photographs this frame has not seen before, they are shown next, ahead of whatever the ordering would pick (every ordering, not only shuffle), and then the ordering resumes where it left off. At most 20 are queued; a bigger import queues its 20 most recent (shown oldest first) and the rest join the rotation normally. All of them get `arrivalBoost` for 24 hours. A frame's first manifest never counts as new, and arrivals still respect hiding and `tagFilter`. Arrivals are detected by comparing manifests on the client, so a frame that was off when photographs arrived does not treat them as new.
 
 `on-this-day` filters to photographs within ±3 days of today's month and day in any year, falling back to shuffle when fewer than five qualify.
 

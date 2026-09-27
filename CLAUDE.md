@@ -74,4 +74,4 @@ Two binaries, two images, two workloads, coupled only through the **database and
 
 ## Spec inconsistencies to settle with the user before building
 
-- **Env var names.** Prose says `SCAN_INTERVAL` and `INGEST_QUIET_SECONDS`, but the config table says `SCAN_INTERVAL_SECS` and `INGEST_QUIET_SECS`; the table wins. `MANIFEST_POLL_INTERVAL` (default 300 s) appears only in prose. The spec's `§N` cross-references don't match any numbered headings, so use heading names.
+- **Env var names.** Prose says `SCAN_INTERVAL` and `INGEST_QUIET_SECONDS`, but the config table says `SCAN_INTERVAL_SECS` and `INGEST_QUIET_SECS`; the table wins. `MANIFEST_POLL_INTERVAL` (default 60 s) appears only in prose. The spec's `§N` cross-references don't match any numbered headings, so use heading names.

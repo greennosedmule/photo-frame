@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { ManifestPhoto } from './api';
-import { Sequencer } from './sequencer';
+import { ARRIVALS_MAX, Sequencer } from './sequencer';
 
 const p = (hash: string, date: string, ...tags: string[]): ManifestPhoto => ({
   hash, w: 1, h: 1, effective_date: date, date_source: 'exif', favorite: false, tags, rotation: 0, media_rotation: 0,
@@ -126,5 +126,52 @@ describe('Sequencer', () => {
     const cfg = { ...base, ordering: 'shuffle' as const };
     s.next(one, cfg);
     expect(s.ahead(one, cfg, 2)).toEqual(['only', 'only']);
+  });
+
+  describe('arrivals', () => {
+    const more = [...lib, p('x', '2019-06-01T00:00:00Z'), p('y', '2023-06-01T00:00:00Z')];
+
+    it('go next, in order, then the chronological walk resumes where it was', () => {
+      const s = new Sequencer();
+      s.next(lib, base); // a
+      s.addArrivals(['y', 'x']);
+      expect([1, 2, 3, 4].map(() => s.next(more, base))).toEqual(['y', 'x', 'b', 'c']);
+    });
+
+    it('jump a shuffle too', () => {
+      const s = new Sequencer();
+      const cfg = { ...base, ordering: 'shuffle' as const };
+      s.next(lib, cfg);
+      s.addArrivals(['x']);
+      expect(s.next(more, cfg)).toBe('x');
+    });
+
+    it('survive a replan that drops them from the preloaded plan', () => {
+      const s = new Sequencer();
+      s.next(lib, base); // a
+      s.addArrivals(['y', 'x']);
+      expect(s.ahead(more, base, 2)).toEqual(['y', 'x']);
+      s.dropAhead();
+      expect(s.ahead(more, base, 2)).toEqual(['y', 'x']);
+      expect(s.next(more, base)).toBe('y');
+      s.dropAhead();
+      // y is on screen, so only x is still waiting.
+      expect([1, 2].map(() => s.next(more, base))).toEqual(['x', 'b']);
+    });
+
+    it('skip ones that are filtered out or gone', () => {
+      const s = new Sequencer();
+      s.next(lib, base); // a
+      s.addArrivals(['gone', 'x']);
+      expect(s.next(more, { ...base, hidden: ['x'] })).toBe('b');
+    });
+
+    it('queue at most ARRIVALS_MAX', () => {
+      const s = new Sequencer();
+      const many = Array.from({ length: ARRIVALS_MAX + 5 }, (_, i) => p(`n${i}`, '2024-01-01T00:00:00Z'));
+      s.addArrivals(many.map((m) => m.hash));
+      const shown = Array.from({ length: ARRIVALS_MAX }, () => s.next(many, base));
+      expect(shown).toEqual(many.slice(0, ARRIVALS_MAX).map((m) => m.hash));
+    });
   });
 });

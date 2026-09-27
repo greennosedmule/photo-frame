@@ -7,7 +7,8 @@
   import { attachGestures } from '../lib/gestures';
   import { oledOffset } from '../lib/oled';
   import { prefetchMedia } from '../lib/prefetch';
-  import { Sequencer } from '../lib/sequencer';
+  import { byDate } from '../lib/ordering';
+  import { ARRIVALS_MAX, Sequencer } from '../lib/sequencer';
   import { initSettings, library, patchPhoto, settings, startPolling, updateSettings } from '../lib/state.svelte';
   import { clampRect, rectToTransform, transformToRect, FULL } from '../lib/zoom';
   import Login from './Login.svelte';
@@ -95,6 +96,22 @@
     // must not swap the photograph out from under it. closeSheet() rechecks.
     if (current && !isEligible(current) && sheet !== 'photo') forward();
     else plan();
+  }
+
+  /** Hashes in the last manifest, to spot new arrivals. Unset until the first one. */
+  let known: Set<string> | undefined;
+
+  /** Queue photographs this frame has not seen before; the first manifest is not "new". */
+  function noticeArrivals() {
+    // A failed fetch is not an empty library; don't let the next success look all new.
+    if (!library.manifest) return;
+    const fresh = known ? photos.filter((p) => !known!.has(p.hash)) : [];
+    known = new Set(photos.map((p) => p.hash));
+    if (fresh.length === 0) return;
+    // A big import queues its most recent photographs, shown oldest first.
+    const newestFirst = byDate(fresh, 'desc');
+    const queued = newestFirst.slice(0, ARRIVALS_MAX).reverse();
+    seq.addArrivals([...queued, ...newestFirst.slice(ARRIVALS_MAX)].map((p) => p.hash));
   }
 
   function isEligible(p: ManifestPhoto): boolean {
@@ -338,6 +355,7 @@
 
     void initSettings().then(() => {
       stopPolling = startPolling(() => {
+        noticeArrivals();
         if (!ready && photos.length > 0) {
           ready = true;
           forward();

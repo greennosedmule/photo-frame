@@ -259,3 +259,22 @@ test('a frame with cached photographs keeps running with no network', async ({ p
     .toBe(true);
   await context.setOffline(false);
 });
+
+test('a photograph added while the frame runs is shown next', async ({ page, stack }) => {
+  // The frame polls once a minute; a fake clock gets there without waiting.
+  await page.clock.install();
+  await openFrame(page, stack);
+  const before = (await stack.manifest()).photos.length;
+
+  await stack.addPhotos(1, 100);
+  await stack.waitForIndexed(before + 1);
+  // Seed 100's file date; nothing else in the library is from then.
+  const added = (await stack.manifest()).photos.find((p) => p.effective_date.startsWith('2022-06-19'))!;
+  expect(added).toBeDefined();
+
+  await page.clock.runFor(61_000);
+  // Queued ahead of the ordering, so it is preloaded as the next photograph.
+  await expect.poll(() => page.locator(`.slide img.photo[src*="${added.hash}"]`).count()).toBeGreaterThan(0);
+  await page.keyboard.press('ArrowRight');
+  await expect.poll(async () => hashOf(await currentSrc(page))).toBe(added.hash);
+});

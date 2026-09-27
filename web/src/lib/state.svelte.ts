@@ -27,8 +27,9 @@ export const library = $state<{ manifest: Manifest | undefined; error: string | 
   loaded: false,
 });
 
-/** Poll interval when idle; the spec's MANIFEST_POLL_INTERVAL default. */
-export const POLL_IDLE_MS = 300_000;
+/** Poll interval when idle; the spec's MANIFEST_POLL_INTERVAL default. Short, so
+ *  new photographs reach the frame quickly; a status check is one counter read. */
+export const POLL_IDLE_MS = 60_000;
 /** While the server reports indexing, look more often so a new library appears promptly. */
 export const POLL_BUSY_MS = 15_000;
 
